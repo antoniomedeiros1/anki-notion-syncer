@@ -16,18 +16,26 @@ type NotionAPI struct {
 func (n NotionAPI) createRequest(method, path string, body interface{}) (*http.Request, error) {
 	url := n.BaseURL + path
 
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
+	var err error
+	var req *http.Request
+	var jsonBody []byte
+
+	if body != nil {
+		jsonBody, err = json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		req, err = http.NewRequest(method, url, bytes.NewBuffer(jsonBody))
+	} else {
+		req, err = http.NewRequest(method, url, nil)
 	}
 
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+n.APIKey)
-	req.Header.Set("Notion-Version", "2021-08-16")
+	req.Header.Set("Notion-Version", "2022-06-28")
 	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
@@ -91,4 +99,45 @@ func (n NotionAPI) GetPage(PageID string) (map[string]interface{}, error) {
 	}
 
 	return response, nil
+}
+
+func (n NotionAPI) GetBlock(BlockID string) (map[string]any, error) {
+	path := "/v1/blocks/" + BlockID
+	req, err := n.createRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var res map[string]any
+
+	err = n.doRequest(req, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+
+}
+
+func (n NotionAPI) GetBlockChildren(BlockID string) (map[string]any, error) {
+	path := "/v1/blocks/" + BlockID + "/children?page_size=100"
+	req, err := n.createRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var res map[string]any
+
+	err = n.doRequest(req, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	// pagination
+	// if res["nextCursor"] != nil {
+	// 	n.GetBlockChildren(BlockID, res["nextCursor"])
+	// }
+
+	return res, nil
+
 }
