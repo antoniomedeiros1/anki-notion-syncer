@@ -6,22 +6,81 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/antoniomedeiros1/anki-notion-syncer/pkg/notionclient"
 	"github.com/spf13/cobra"
 )
 
 // syncCmd represents the sync command
 var syncCmd = &cobra.Command{
 	Use:   "sync",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Syncronizes Notion with Anki.",
+	Long:  `Receives a path to a page in Notion wich has the table Flashcards and updates Anki deck.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sync called")
+
+		pageID := args[0]
+		// deckName := args[1]
+
+		notion := notionclient.NotionAPI{
+			BaseURL: "https://api.notion.com",
+			APIKey:  os.Getenv("NOTION_KEY"),
+		}
+
+		res, err := notion.GetBlockChildren(pageID)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			if res["results"] != nil {
+
+				results, ok := res["results"].([]interface{})
+				if !ok {
+					panic("Unexpected type for results field")
+				}
+
+				for _, block := range results {
+					blockMap, ok := block.(map[string]interface{})
+					if !ok {
+						panic("Unexpected type for block")
+					}
+					blockType, ok := blockMap["type"].(string)
+					if !ok {
+						panic("Unexpected type for object field")
+					}
+					fmt.Println(blockType)
+				}
+
+			} else {
+				fmt.Println(nil)
+			}
+		}
+
+		// iterate over the content blocks and print them out
+		// for _, block := range content {
+		// 	blockMap, ok := block.(map[string]interface{})
+		// 	if !ok {
+		// 		panic("Unexpected type for block")
+		// 	}
+		// 	objectType, ok := blockMap["object"].(string)
+		// 	if !ok {
+		// 		panic("Unexpected type for object field")
+		// 	}
+		// 	switch objectType {
+		// 	case "paragraph":
+		// 		text := blockMap["paragraph"].(map[string]interface{})["text"].([]interface{})[0].(map[string]interface{})
+		// 		content := text["content"].(string)
+		// 		fmt.Printf("Paragraph: %s\n", content)
+		// 	case "heading_1":
+		// 		text := blockMap["heading_1"].(map[string]interface{})["text"].([]interface{})[0].(map[string]interface{})
+		// 		content := text["content"].(string)
+		// 		fmt.Printf("Heading 1: %s\n", content)
+		// 	case "table":
+		// 		// handle table blocks
+		// 		fmt.Println("Table:")
+		// 	default:
+		// 		fmt.Printf("Unknown block type: %s\n", objectType)
+		// 	}
+		// }
 	},
 }
 
